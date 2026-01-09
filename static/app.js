@@ -1,5 +1,7 @@
 let conversationHistory = [];
 let isListening = false;
+let isSpeaking = false;  // Флаг когда AI говорит
+let isProcessing = false;  // Флаг когда обрабатывается запрос
 let recognition = null;
 let currentAudio = null;
 
@@ -7,11 +9,26 @@ let currentAudio = null;
 if ('webkitSpeechRecognition' in window) {
     recognition = new webkitSpeechRecognition();
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = false;  // ВАЖНО: только финальные результаты
     recognition.lang = 'ru-RU';
     
+    let lastTranscript = '';  // Храним последний текст
+    let lastSentTime = 0;     // Время последней отправки
+    
     recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
+        const transcript = event.results[0][0].transcript.trim();
+        const currentTime = Date.now();
+        
+        // Игнорируем дубликаты и быстрые повторы
+        if (transcript === lastTranscript || 
+            currentTime - lastSentTime < 2000 ||
+            transcript.length < 2) {
+            return;
+        }
+        
+        lastTranscript = transcript;
+        lastSentTime = currentTime;
+        
         document.getElementById('messageInput').value = transcript;
         addMessage('user', transcript);
         sendToAI(transcript);
@@ -19,13 +36,20 @@ if ('webkitSpeechRecognition' in window) {
     
     recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
-        isListening = false;
-        updateVoiceButton();
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            isListening = false;
+            updateVoiceButton();
+        }
     };
     
     recognition.onend = () => {
         if (isListening) {
-            recognition.start();
+            // Задержка перед новым запуском
+            setTimeout(() => {
+                if (isListening) {
+                    recognition.start();
+                }
+            }, 500);
         }
     };
 }
@@ -66,6 +90,12 @@ async function sendMessage() {
 }
 
 async function sendToAI(message) {
+    // Игнорируем если уже обрабатывается запрос или AI говорит
+    if (isProcessing || isSpeaking) {
+        console.log('Запрос игнорирован: уже обрабатывается');
+        return;
+    }
+    
     const provider = document.getElementById('provider').value;
     const apiKey = document.getElementById('apiKey').value;
     const personality = document.getElementById('personality').value;
@@ -75,6 +105,7 @@ async function sendToAI(message) {
         return;
     }
     
+    isProcessing = true;
     updateStatus('🤔 Думает...', 'rgba(33, 150, 243, 0.9)');
     
     try {
@@ -112,10 +143,13 @@ async function sendToAI(message) {
     } catch (error) {
         addMessage('system', `❌ Ошибка: ${error.message}`);
         updateStatus('😴 Спит', 'rgba(212, 175, 55, 0.9)');
+    } finally {
+        isProcessing = false;
     }
 }
 
 async function speakText(text) {
+    isSpeaking = true;
     updateStatus('🗣️ Говорит', 'rgba(255, 152, 0, 0.9)');
     updateFullscreenText(text);
     
@@ -144,6 +178,7 @@ async function speakText(text) {
             currentAudio = audio;
             
             audio.onended = () => {
+                isSpeaking = false;
                 updateStatus(isListening ? '👂 Слушает' : '😴 Спит', 
                            isListening ? 'rgba(33, 150, 243, 0.9)' : 'rgba(212, 175, 55, 0.9)');
                 setTimeout(() => updateFullscreenText(''), 2000);
@@ -155,6 +190,7 @@ async function speakText(text) {
         
     } catch (error) {
         console.error('TTS error:', error);
+        isSpeaking = false;
         updateStatus(isListening ? '👂 Слушает' : '😴 Спит', 
                    isListening ? 'rgba(33, 150, 243, 0.9)' : 'rgba(212, 175, 55, 0.9)');
     }
