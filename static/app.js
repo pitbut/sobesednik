@@ -16,6 +16,12 @@ if ('webkitSpeechRecognition' in window) {
     let lastSentTime = 0;     // Время последней отправки
     
     recognition.onresult = (event) => {
+        // КРИТИЧНО: Игнорируем если AI говорит!
+        if (isSpeaking || isProcessing) {
+            console.log('Игнорировано: AI говорит или думает');
+            return;
+        }
+        
         const transcript = event.results[0][0].transcript.trim();
         const currentTime = Date.now();
         
@@ -150,6 +156,16 @@ async function sendToAI(message) {
 
 async function speakText(text) {
     isSpeaking = true;
+    
+    // ОСТАНАВЛИВАЕМ распознавание пока говорим!
+    if (recognition && isListening) {
+        try {
+            recognition.stop();
+        } catch(e) {
+            console.log('Recognition already stopped');
+        }
+    }
+    
     updateStatus('🗣️ Говорит', 'rgba(255, 152, 0, 0.9)');
     updateFullscreenText(text);
     
@@ -178,11 +194,25 @@ async function speakText(text) {
             currentAudio = audio;
             
             audio.onended = () => {
-                isSpeaking = false;
-                updateStatus(isListening ? '👂 Слушает' : '😴 Спит', 
-                           isListening ? 'rgba(33, 150, 243, 0.9)' : 'rgba(212, 175, 55, 0.9)');
-                setTimeout(() => updateFullscreenText(''), 2000);
-                currentAudio = null;
+                // Ждем 1 секунду после окончания речи
+                setTimeout(() => {
+                    isSpeaking = false;
+                    updateStatus(isListening ? '👂 Слушает' : '😴 Спит', 
+                               isListening ? 'rgba(33, 150, 243, 0.9)' : 'rgba(212, 175, 55, 0.9)');
+                    setTimeout(() => updateFullscreenText(''), 2000);
+                    currentAudio = null;
+                    
+                    // ПЕРЕЗАПУСКАЕМ распознавание после речи
+                    if (isListening && recognition) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch(e) {
+                                console.log('Recognition restart failed:', e);
+                            }
+                        }, 1000);
+                    }
+                }, 1000);
             };
             
             await audio.play();
@@ -193,6 +223,15 @@ async function speakText(text) {
         isSpeaking = false;
         updateStatus(isListening ? '👂 Слушает' : '😴 Спит', 
                    isListening ? 'rgba(33, 150, 243, 0.9)' : 'rgba(212, 175, 55, 0.9)');
+        
+        // Перезапускаем распознавание при ошибке
+        if (isListening && recognition) {
+            setTimeout(() => {
+                try {
+                    recognition.start();
+                } catch(e) {}
+            }, 1000);
+        }
     }
 }
 
@@ -269,6 +308,7 @@ function toggleFullscreen() {
 window.addEventListener('load', () => {
     loadAvatar();
     addMessage('system', '👋 Добро пожаловать! Введите API ключ и начните общение.');
+    addMessage('system', '🎧 ВАЖНО: Используйте наушники для голосового ввода! Иначе микрофон будет слышать AI.');
 });
 
 // ESC для выхода из полного экрана
