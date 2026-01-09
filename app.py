@@ -112,6 +112,18 @@ def chat_openai(message, role, api_key, history):
 def index():
     return render_template('index.html')
 
+@app.route('/info.json')
+def info():
+    """Endpoint для портфолио"""
+    return jsonify({
+        "title": "🎙️ Свободный Чат",
+        "description": "AI собеседник с голосовым управлением и анимированным аватаром. Поддержка Groq, Google Gemini, OpenAI. 7 личностей включая Учителя. Голосовой ввод/вывод на русском языке.",
+        "image": "https://sobesednik.onrender.com/static/preview.jpg",
+        "link": "https://sobesednik.onrender.com",
+        "date": "2026-01-10",
+        "tags": ["AI", "Голос", "Python", "Flask"]
+    })
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     try:

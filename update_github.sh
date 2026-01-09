@@ -1,0 +1,18 @@
+#!/bin/bash
+
+echo "📝 Инструкция по добавлению файлов в GitHub:"
+echo ""
+echo "1. Скопируйте файлы info.json и preview.jpg в папку проекта"
+echo ""
+echo "2. Выполните команды:"
+echo ""
+echo "   git add info.json preview.jpg"
+echo "   git commit -m 'Add portfolio info and preview'"
+echo "   git push origin main"
+echo ""
+echo "3. Добавьте в ваш сайт robutpit.com:"
+echo ""
+echo "   const response = await fetch('https://sobesednik.onrender.com/info.json');"
+echo "   const projectInfo = await response.json();"
+echo ""
+echo "✅ Готово!"
