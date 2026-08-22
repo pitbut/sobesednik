@@ -118,8 +118,8 @@ def info():
     return jsonify({
         "title": "🎙️ Свободный Чат",
         "description": "AI собеседник с голосовым управлением и анимированным аватаром. Поддержка Groq, Google Gemini, OpenAI. 7 личностей включая Учителя. Голосовой ввод/вывод на русском языке.",
-        "image": "https://sobesednik.onrender.com/static/preview.jpg",
-        "link": "https://sobesednik.onrender.com",
+        "image": "https://sobesednik.robutpit.com/static/preview.jpg",
+        "link": "https://sobesednik.robutpit.com",
         "date": "2026-01-10",
         "tags": ["AI", "Голос", "Python", "Flask"]
     })
